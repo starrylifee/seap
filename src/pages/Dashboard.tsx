@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, FileText, Users, BarChart3, Settings, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 
 interface Project {
   id: string;
@@ -19,6 +20,7 @@ const Dashboard = () => {
   const [schoolName, setSchoolName] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     const schoolId = sessionStorage.getItem("school_id");
@@ -148,7 +150,10 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold text-foreground">평가 프로젝트</h2>
               <p className="text-muted-foreground">학교평가 및 교육계획 수립 프로젝트를 관리하세요</p>
             </div>
-            <Button className="gradient-primary text-white shadow-medium hover:shadow-large transition-smooth">
+            <Button 
+              className="gradient-primary text-white shadow-medium hover:shadow-large transition-smooth"
+              onClick={() => setCreateDialogOpen(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
               새 프로젝트 만들기
             </Button>
@@ -166,7 +171,10 @@ const Dashboard = () => {
                 <p className="text-muted-foreground mb-4">
                   첫 번째 평가 프로젝트를 만들어 시작하세요
                 </p>
-                <Button className="gradient-primary text-white">
+                <Button 
+                  className="gradient-primary text-white"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   프로젝트 만들기
                 </Button>
@@ -199,6 +207,16 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+
+      <CreateProjectDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        schoolId={sessionStorage.getItem("school_id") || ""}
+        onSuccess={() => {
+          const schoolId = sessionStorage.getItem("school_id");
+          if (schoolId) loadProjects(schoolId);
+        }}
+      />
     </div>
   );
 };
