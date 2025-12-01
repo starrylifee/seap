@@ -186,6 +186,7 @@ const Dashboard = () => {
                 <Card
                   key={project.id}
                   className="shadow-medium border-border/50 hover:shadow-large transition-smooth cursor-pointer"
+                  onClick={() => navigate(`/project/${project.id}`)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
