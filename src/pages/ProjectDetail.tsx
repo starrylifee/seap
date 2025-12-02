@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Link2, Users, FileText, BarChart3 } from "lucide-react";
+import { ArrowLeft, Link2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProjectStats } from "@/components/ProjectStats";
+import { QuestionManager } from "@/components/QuestionManager";
 
 type RespondentType = "teacher" | "staff" | "parent" | "student";
 
@@ -61,20 +63,6 @@ const ProjectDetail = () => {
     },
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ["project-stats", projectId],
-    queryFn: async () => {
-      const [questionsResult, responsesResult] = await Promise.all([
-        supabase.from("questions").select("id", { count: "exact" }).eq("project_id", projectId),
-        supabase.from("responses").select("id", { count: "exact" }).eq("project_id", projectId),
-      ]);
-
-      return {
-        totalQuestions: questionsResult.count || 0,
-        totalResponses: responsesResult.count || 0,
-      };
-    },
-  });
 
   const createLinkMutation = useMutation({
     mutationFn: async (respondentType: RespondentType) => {
@@ -187,41 +175,17 @@ const ProjectDetail = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="gradient-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">전체 문항</CardTitle>
-              <FileText className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalQuestions || 0}개</div>
-            </CardContent>
-          </Card>
+        {/* Main Content */}
+        <Tabs defaultValue="links" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="links">설문 링크</TabsTrigger>
+            <TabsTrigger value="questions">문항 관리</TabsTrigger>
+            <TabsTrigger value="stats">통계</TabsTrigger>
+          </TabsList>
 
-          <Card className="gradient-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">전체 응답</CardTitle>
-              <BarChart3 className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalResponses || 0}건</div>
-            </CardContent>
-          </Card>
+          <TabsContent value="links" className="space-y-6">
 
-          <Card className="gradient-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">설문 링크</CardTitle>
-              <Link2 className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{surveyLinks?.length || 0}개</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Survey Links */}
-        <Card className="gradient-card">
+            <Card className="gradient-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -317,6 +281,16 @@ const ProjectDetail = () => {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="questions">
+            <QuestionManager projectId={projectId!} />
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <ProjectStats projectId={projectId!} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
