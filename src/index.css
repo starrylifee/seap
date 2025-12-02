@@ -133,15 +133,15 @@ All colors MUST be HSL.
 
 @layer utilities {
   .gradient-primary {
-    background: var(--gradient-primary);
+    background-image: var(--gradient-primary);
   }
 
   .gradient-subtle {
-    background: var(--gradient-subtle);
+    background-image: var(--gradient-subtle);
   }
 
   .gradient-card {
-    background: var(--gradient-card);
+    background-image: var(--gradient-card);
   }
 
   .shadow-soft {
