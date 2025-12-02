@@ -7,7 +7,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Save, ArrowRight, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface Question {
   id: string;
@@ -15,6 +17,7 @@ interface Question {
   question_type: "rating" | "multiple_choice" | "text" | "priority";
   order_index: number;
   is_required: boolean;
+  section_name: string | null;
   options?: any;
 }
 
@@ -25,7 +28,7 @@ interface SurveyLink {
   is_active: boolean;
 }
 
-const Survey = () => {
+const TeacherSurvey = () => {
   const { accessCode } = useParams<{ accessCode: string }>();
   const navigate = useNavigate();
   
@@ -36,10 +39,22 @@ const Survey = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random()}`);
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
+  const [savedProgress, setSavedProgress] = useState(false);
 
   useEffect(() => {
     loadSurvey();
+    loadSavedResponses();
   }, [accessCode]);
+
+  const loadSavedResponses = () => {
+    const saved = localStorage.getItem(`survey_draft_${accessCode}`);
+    if (saved) {
+      setResponses(JSON.parse(saved));
+      setSavedProgress(true);
+      toast.info("임시 저장된 응답을 불러왔습니다.");
+    }
+  };
 
   const loadSurvey = async () => {
     if (!accessCode) {
@@ -49,7 +64,6 @@ const Survey = () => {
     }
 
     try {
-      // Get survey link info
       const { data: linkData, error: linkError } = await supabase
         .from("survey_links")
         .select("*")
@@ -68,15 +82,8 @@ const Survey = () => {
         return;
       }
 
-      // Redirect teachers to advanced survey
-      if (linkData.respondent_type === "teacher") {
-        navigate(`/teacher-survey/${accessCode}`);
-        return;
-      }
-
       setSurveyLink(linkData);
 
-      // Get questions for this respondent type
       const { data: questionsData, error: questionsError } = await supabase
         .from("questions")
         .select("*")
@@ -87,6 +94,14 @@ const Survey = () => {
       if (questionsError) throw questionsError;
 
       setQuestions(questionsData || []);
+      
+      // Set first section as current
+      if (questionsData && questionsData.length > 0) {
+        const sections = Array.from(new Set(questionsData.map((q) => q.section_name).filter(Boolean)));
+        if (sections.length > 0) {
+          setCurrentSection(sections[0]);
+        }
+      }
     } catch (error) {
       console.error("Survey load error:", error);
       toast.error("설문을 불러오는 중 오류가 발생했습니다.");
@@ -99,10 +114,15 @@ const Survey = () => {
     setResponses((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  const handleSaveDraft = () => {
+    localStorage.setItem(`survey_draft_${accessCode}`, JSON.stringify(responses));
+    setSavedProgress(true);
+    toast.success("임시 저장되었습니다.");
+  };
+
   const handleSubmit = async () => {
     if (!surveyLink) return;
 
-    // Check required questions
     const unansweredRequired = questions.filter(
       (q) => q.is_required && !responses[q.id]
     );
@@ -115,7 +135,6 @@ const Survey = () => {
     setSubmitting(true);
 
     try {
-      // Prepare responses for insertion
       const responsesToInsert = questions
         .filter((q) => responses[q.id])
         .map((q) => ({
@@ -130,6 +149,9 @@ const Survey = () => {
 
       if (error) throw error;
 
+      // Clear saved draft
+      localStorage.removeItem(`survey_draft_${accessCode}`);
+      
       setCompleted(true);
       toast.success("설문 응답이 제출되었습니다. 감사합니다!");
     } catch (error) {
@@ -138,16 +160,6 @@ const Survey = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const getRespondentTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      teacher: "교원",
-      staff: "직원",
-      parent: "학부모",
-      student: "학생",
-    };
-    return labels[type] || type;
   };
 
   const renderRatingQuestion = (question: Question) => (
@@ -184,6 +196,18 @@ const Survey = () => {
     />
   );
 
+  const sections = Array.from(new Set(questions.map((q) => q.section_name).filter(Boolean)));
+  const sectionQuestions = currentSection
+    ? questions.filter((q) => q.section_name === currentSection)
+    : questions;
+
+  const totalAnswered = Object.keys(responses).length;
+  const progressPercentage = questions.length > 0 ? (totalAnswered / questions.length) * 100 : 0;
+
+  const currentSectionIndex = sections.indexOf(currentSection || "");
+  const canGoNext = currentSectionIndex < sections.length - 1;
+  const canGoPrev = currentSectionIndex > 0;
+
   if (loading) {
     return (
       <div className="min-h-screen gradient-subtle flex items-center justify-center">
@@ -218,18 +242,47 @@ const Survey = () => {
 
   return (
     <div className="min-h-screen gradient-subtle py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-2xl">학교평가 설문조사</CardTitle>
+            <CardTitle className="text-2xl">교원 심화 설문조사</CardTitle>
             <CardDescription>
-              응답자 유형: <span className="font-semibold">{surveyLink && getRespondentTypeLabel(surveyLink.respondent_type)}</span>
+              섹션별로 구성된 설문입니다. 언제든지 임시 저장할 수 있습니다.
             </CardDescription>
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>응답 진행률</span>
+                <span>{totalAnswered} / {questions.length} 문항</span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+            </div>
           </CardHeader>
         </Card>
 
+        {/* Section Navigation */}
+        {sections.length > 0 && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex flex-wrap gap-2">
+                {sections.map((section) => (
+                  <Badge
+                    key={section}
+                    variant={section === currentSection ? "default" : "outline"}
+                    className="cursor-pointer px-4 py-2"
+                    onClick={() => setCurrentSection(section)}
+                  >
+                    {section}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Questions */}
         <div className="space-y-6">
-          {questions.map((question, index) => (
+          {sectionQuestions.map((question, index) => (
             <Card key={question.id}>
               <CardHeader>
                 <CardTitle className="text-lg font-medium">
@@ -247,26 +300,56 @@ const Survey = () => {
           ))}
         </div>
 
-        <div className="mt-8 flex justify-center">
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            size="lg"
-            className="gradient-primary text-white px-12"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                제출 중...
-              </>
-            ) : (
-              "설문 제출"
+        {/* Navigation & Actions */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="flex gap-2">
+            {canGoPrev && (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentSection(sections[currentSectionIndex - 1])}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                이전 섹션
+              </Button>
             )}
-          </Button>
+            {canGoNext && (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentSection(sections[currentSectionIndex + 1])}
+              >
+                다음 섹션
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              임시 저장
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="gradient-primary text-white"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  제출 중...
+                </>
+              ) : (
+                "설문 제출"
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default Survey;
+export default TeacherSurvey;
