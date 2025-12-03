@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle, Save, ArrowRight, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { PriorityVoting } from "@/components/PriorityVoting";
 
 interface Question {
   id: string;
@@ -196,6 +197,28 @@ const TeacherSurvey = () => {
     />
   );
 
+  const renderPriorityQuestion = (question: Question) => {
+    const options = question.options as string[] | undefined;
+    const items = options || [
+      "교육과정 운영 개선",
+      "교원 연수 확대",
+      "학생 생활지도 강화",
+      "시설 환경 개선",
+      "학부모 소통 강화",
+      "행정업무 경감",
+    ];
+    
+    return (
+      <PriorityVoting
+        questionId={question.id}
+        items={items}
+        maxSelections={3}
+        value={responses[question.id]}
+        onChange={(value) => handleResponseChange(question.id, value)}
+      />
+    );
+  };
+
   const sections = Array.from(new Set(questions.map((q) => q.section_name).filter(Boolean)));
   const sectionQuestions = currentSection
     ? questions.filter((q) => q.section_name === currentSection)
@@ -295,6 +318,7 @@ const TeacherSurvey = () => {
               <CardContent>
                 {question.question_type === "rating" && renderRatingQuestion(question)}
                 {question.question_type === "text" && renderTextQuestion(question)}
+                {question.question_type === "priority" && renderPriorityQuestion(question)}
               </CardContent>
             </Card>
           ))}
