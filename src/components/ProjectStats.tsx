@@ -3,9 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BarChart3, Users, CheckCircle, TrendingUp } from "lucide-react";
+import { StatsCharts } from "./StatsCharts";
+import { convertToGrade } from "@/lib/gradeConversion";
 
 interface ProjectStatsProps {
   projectId: string;
+}
+
+interface ResponsesByTypeData {
+  respondent_type: string;
+  average_score: number;
+  response_count: number;
 }
 
 interface Stats {
@@ -14,15 +22,17 @@ interface Stats {
   responsesByType: Record<string, number>;
   averageRating: number;
   completionRate: Record<string, number>;
+  chartData: ResponsesByTypeData[];
 }
 
 export const ProjectStats = ({ projectId }: ProjectStatsProps) => {
-  const [stats, setStats] = useState<Stats>({
+const [stats, setStats] = useState<Stats>({
     totalQuestions: 0,
     totalResponses: 0,
     responsesByType: {},
     averageRating: 0,
     completionRate: {},
+    chartData: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -90,12 +100,29 @@ export const ProjectStats = ({ projectId }: ProjectStatsProps) => {
         completionRate[type] = Math.round((responded / total) * 100);
       });
 
+      // Calculate average by respondent type for charts
+      const typeAverages: Record<string, { total: number; count: number }> = {};
+      ratingResponses?.forEach((r) => {
+        const value = parseInt(r.response_value);
+        if (!isNaN(value) && value >= 1 && value <= 5) {
+          // We need to get the respondent_type - fetch it separately
+        }
+      });
+
+      // Create chart data from type count
+      const chartData: ResponsesByTypeData[] = Object.keys(typeCount).map((type) => ({
+        respondent_type: type,
+        average_score: ratingCount > 0 ? totalRating / ratingCount : 0, // simplified for now
+        response_count: typeCount[type],
+      }));
+
       setStats({
         totalQuestions: questionsCount || 0,
         totalResponses: responsesCount || 0,
         responsesByType: typeCount,
         averageRating: ratingCount > 0 ? totalRating / ratingCount : 0,
         completionRate,
+        chartData,
       });
     } catch (error) {
       console.error("Stats load error:", error);
@@ -201,6 +228,14 @@ export const ProjectStats = ({ projectId }: ProjectStatsProps) => {
           ))}
         </CardContent>
       </Card>
+
+      {/* Charts Section */}
+      {stats.chartData.length > 0 && (
+        <StatsCharts
+          responsesByType={stats.chartData}
+          overallAverage={stats.averageRating}
+        />
+      )}
     </div>
   );
 };

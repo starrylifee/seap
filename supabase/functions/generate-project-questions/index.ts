@@ -63,6 +63,50 @@ const questionTemplates: Record<string, QuestionTemplate[]> = {
   ],
 }
 
+// Additional questions that don't map to specific indicators
+const additionalQuestions = [
+  // Teacher priority voting for next year
+  { 
+    respondentType: 'teacher' as const, 
+    questionText: '내년도 학교 운영에서 가장 중점을 두어야 할 영역은? (우선순위로 3개 선택)', 
+    questionType: 'priority' as const, 
+    orderIndex: 100, 
+    sectionName: '내년도 계획',
+    options: JSON.stringify([
+      '교육과정 운영 개선',
+      '교원 연수 및 전문성 강화',
+      '학생 생활지도 및 상담 강화',
+      '시설 환경 개선',
+      '학부모 소통 및 참여 확대',
+      '행정업무 경감',
+      '기초학력 지원 강화',
+      '진로 및 직업교육 확대',
+    ])
+  },
+  // Teacher open-ended feedback
+  { 
+    respondentType: 'teacher' as const, 
+    questionText: '학교 발전을 위한 건의사항이 있으시면 자유롭게 작성해 주세요.', 
+    questionType: 'text' as const, 
+    orderIndex: 101, 
+    sectionName: '내년도 계획',
+  },
+  // Parent open-ended feedback
+  { 
+    respondentType: 'parent' as const, 
+    questionText: '학교 발전을 위한 건의사항이 있으시면 자유롭게 작성해 주세요.', 
+    questionType: 'text' as const, 
+    orderIndex: 100, 
+  },
+  // Student open-ended feedback
+  { 
+    respondentType: 'student' as const, 
+    questionText: '선생님께 하고 싶은 말이 있으면 적어주세요.', 
+    questionType: 'text' as const, 
+    orderIndex: 100, 
+  },
+]
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -108,6 +152,21 @@ Deno.serve(async (req) => {
           })
         })
       }
+    })
+
+    // Add additional questions (priority voting, open-ended feedback)
+    additionalQuestions.forEach(q => {
+      questionsToInsert.push({
+        project_id: projectId,
+        indicator_id: null,
+        respondent_type: q.respondentType,
+        question_text: q.questionText,
+        question_type: q.questionType,
+        order_index: q.orderIndex,
+        section_name: q.sectionName || null,
+        is_required: false,
+        options: 'options' in q ? q.options : null,
+      })
     })
 
     // Insert all questions
