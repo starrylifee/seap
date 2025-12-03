@@ -162,13 +162,6 @@ export type Database = {
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "projects_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       questions: {
@@ -386,47 +379,11 @@ export type Database = {
             referencedRelation: "schools"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_roles_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      schools_public: {
-        Row: {
-          created_at: string | null
-          id: string | null
-          region: string | null
-          school_code: string | null
-          school_name: string | null
-          school_type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-          region?: string | null
-          school_code?: string | null
-          school_name?: string | null
-          school_type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-          region?: string | null
-          school_code?: string | null
-          school_name?: string | null
-          school_type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
