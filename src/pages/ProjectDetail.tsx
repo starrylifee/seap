@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Link2, Users, Sparkles } from "lucide-react";
+import { ArrowLeft, Link2, Users, Sparkles, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectStats } from "@/components/ProjectStats";
 import { QuestionManager } from "@/components/QuestionManager";
 import { AIAnalysis } from "@/components/AIAnalysis";
+import { ReportGenerator } from "@/components/ReportGenerator";
 
 type RespondentType = "teacher" | "staff" | "parent" | "student";
 
@@ -178,13 +179,17 @@ const ProjectDetail = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="links" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="links">설문 링크</TabsTrigger>
             <TabsTrigger value="questions">문항 관리</TabsTrigger>
             <TabsTrigger value="stats">통계</TabsTrigger>
             <TabsTrigger value="ai" className="flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
               AI 분석
+            </TabsTrigger>
+            <TabsTrigger value="report" className="flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              보고서
             </TabsTrigger>
           </TabsList>
 
@@ -297,6 +302,9 @@ const ProjectDetail = () => {
           </TabsContent>
           <TabsContent value="ai">
             <AIAnalysis projectId={projectId!} />
+          </TabsContent>
+          <TabsContent value="report">
+            <ReportGenerator projectId={projectId!} />
           </TabsContent>
         </Tabs>
       </div>
