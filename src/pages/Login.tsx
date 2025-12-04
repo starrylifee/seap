@@ -19,33 +19,25 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // 학교 코드로 학교 정보 조회
-      const { data: school, error: schoolError } = await supabase
-        .from("schools")
-        .select("*")
-        .eq("school_code", schoolCode)
-        .single();
+      // 서버 측 로그인 검증 (Edge Function 사용)
+      const { data, error } = await supabase.functions.invoke('secure-login', {
+        body: { schoolCode, password }
+      });
 
-      if (schoolError || !school) {
-        toast.error("학교 코드를 찾을 수 없습니다.");
+      if (error || !data?.success) {
+        toast.error(data?.error || "로그인에 실패했습니다.");
         setIsLoading(false);
         return;
       }
 
-      // 임시: 개발 단계에서는 간단한 비밀번호 확인
-      // TODO: Phase 2에서 실제 해시 비교로 변경
-      if (password !== school.password_hash) {
-        toast.error("비밀번호가 올바르지 않습니다.");
-        setIsLoading(false);
-        return;
-      }
+      // 세션 저장 (서버에서 검증된 데이터만 저장)
+      sessionStorage.setItem("school_id", data.school.id);
+      sessionStorage.setItem("school_code", data.school.school_code);
+      sessionStorage.setItem("school_name", data.school.school_name);
+      sessionStorage.setItem("session_token", data.sessionToken);
+      sessionStorage.setItem("session_expires", data.expiresAt);
 
-      // 세션 저장
-      sessionStorage.setItem("school_id", school.id);
-      sessionStorage.setItem("school_code", school.school_code);
-      sessionStorage.setItem("school_name", school.school_name);
-
-      toast.success(`${school.school_name}에 로그인했습니다.`);
+      toast.success(`${data.school.school_name}에 로그인했습니다.`);
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
