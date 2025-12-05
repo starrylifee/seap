@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,9 +44,29 @@ serve(async (req) => {
       );
     }
 
-    // Verify password (currently plaintext comparison - TODO: implement bcrypt)
-    // For now, we do server-side comparison which is still more secure than client-side
-    if (password !== school.password_hash) {
+    // Check if password is bcrypt hashed (starts with $2)
+    const isHashed = school.password_hash.startsWith('$2');
+    let isValidPassword = false;
+
+    if (isHashed) {
+      // Verify bcrypt hashed password
+      isValidPassword = await bcrypt.compare(password, school.password_hash);
+    } else {
+      // Legacy plaintext comparison (for migration period)
+      isValidPassword = password === school.password_hash;
+      
+      // If plaintext match, upgrade to bcrypt hash
+      if (isValidPassword) {
+        console.log("Upgrading password to bcrypt for school:", schoolCode);
+        const hashedPassword = await bcrypt.hash(password);
+        await supabase
+          .from("schools")
+          .update({ password_hash: hashedPassword })
+          .eq("id", school.id);
+      }
+    }
+
+    if (!isValidPassword) {
       console.log("Invalid password for school:", schoolCode);
       return new Response(
         JSON.stringify({ error: "비밀번호가 올바르지 않습니다." }),
